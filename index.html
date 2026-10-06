@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCP/IP Troubleshooting Lab - Diagnosing Network Faults</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 40px auto;
+            max-width: 800px;
+            background-color: #ffffff;
+            color: #333333;
+            padding: 0 20px;
+        }
+        h1, h2, h3 {
+            color: #111111;
+        }
+        /* Style focus indicator for contenteditable blocks */
+        [contenteditable="true"]:focus {
+            outline: 2px solid #005fcc;
+            outline-offset: 4px;
+            background-color: #f4f8fb;
+        }
+        ul, ol {
+            margin-bottom: 20px;
+        }
+        hr {
+            border: 0;
+            border-top: 1px solid #dddddd;
+            margin: 30px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #dddddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        blockquote {
+            background-color: #f9f9f9;
+            border-left: 4px solid #005fcc;
+            margin: 15px 0;
+            padding: 10px 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1 contenteditable="true">TCP/IP Troubleshooting Lab</h1>
+    <p contenteditable="true"><strong>Diagnosing Network Faults on the 172.16.100.x/24 Subnet</strong><br><em>Screen-Reader Accessible &nbsp;|&nbsp; Non-Graded Practice Exercise</em></p>
+
+    <blockquote contenteditable="true">
+        <p><strong>♿ Accessibility Notes:</strong><br>
+        <strong>SCREEN READER TIP:</strong> Commands are on their own line in a blue-bordered block. Use review keys to read each character before pressing Enter. Do not press Enter until you have heard the full command.<br>
+        <strong>SCREEN READER TIP:</strong> Sample output blocks have a red left border. They represent what your screen reader would announce after running a command. They are not commands — do not type them.<br>
+        <strong>SCREEN READER TIP:</strong> Headings are Heading 1, 2, and 3. In NVDA or JAWS browse mode, press H to jump between headings, T to jump between tables, and arrow keys to navigate table cells.</p>
+    </blockquote>
+    <hr>
+
+    <h2 contenteditable="true">Lab Overview</h2>
+    <p contenteditable="true">In this exercise you and your partner act as network technicians responding to fault reports on the isolated 172.16.100.x/24 subnet. One of you runs the diagnostic commands while the other acts as the remote host. You swap roles between scenarios.</p>
+    <p contenteditable="true">This lab is not graded. The goal is to practice using each command until it feels natural and you understand what its output is telling you. Each scenario presents a symptom, guides you to the right command, and asks you to apply a fix.</p>
+
+    <h2 contenteditable="true">Your Addresses for This Lab</h2>
+    <table>
+        <tr>
+            <th contenteditable="true">Device / Interface</th>
+            <th contenteditable="true">IP Address</th>
+            <th contenteditable="true">Subnet Mask</th>
+            <th contenteditable="true">Gateway</th>
+        </tr>
+        <tr>
+            <td contenteditable="true">Student B PC1</td>
+            <td contenteditable="true">172.16.100.10</td>
+            <td contenteditable="true">255.255.255.0</td>
+            <td contenteditable="true">172.16.100.1</td>
+        </tr>
+        <tr>
+            <td contenteditable="true">Student B PC2</td>
+            <td contenteditable="true">172.16.100.11</td>
+            <td contenteditable="true">255.255.255.0</td>
+            <td contenteditable="true">172.16.100.1</td>
+        </tr>
+        <tr>
+            <td contenteditable="true">TP-Link LAN Gateway</td>
+            <td contenteditable="true">172.16.100.1</td>
+            <td contenteditable="true">255.255.255.0</td>
+            <td contenteditable="true">—</td>
+        </tr>
+    </table>
+
+    <blockquote contenteditable="true">
+        <p><strong>📝 NOTE:</strong><br>
+        The DNS server configured on both machines is 8.8.8.8 (Google Public DNS). This server can resolve public internet hostnames but it has no knowledge of local lab names such as pc1-student-b or pc2-student-b. Local name resolution in this lab is done through the hosts file, explained in Scenario 2.</p>
+    </blockquote>
+    <hr>
+
+    <h2 contenteditable="true">Command Reference</h2>
+    <p contenteditable="true">Review this table before starting the scenarios:</p>
+    <table>
+        <tr>
+            <th contenteditable="true">Command</th>
+            <th contenteditable="true">What It Shows</th>
+            <th contenteditable="true">When to Use It</th>
+        </tr>
+        <tr>
+            <td contenteditable="true"><code>ipconfig</code></td>
+            <td contenteditable="true">IP address, subnet mask, and default gateway for each adapter</td>
+            <td contenteditable="true">Quick sanity-check that an address is assigned and correct</td>
+        </tr>
+        <tr>
+            <td contenteditable="true"><code>ipconfig /all</code></td>
+            <td contenteditable="true">Full detail: MAC address, DHCP enabled/disabled, DNS server address, lease times</td>
+            <td contenteditable="true">Deep-dive when basic config looks wrong or DHCP is suspect</td>
+        </tr>
+        <tr>
+            <td contenteditable="true"><code>ipconfig /release</code></td>
+            <td contenteditable="true">Releases the current DHCP lease without requesting a new one</td>
+            <td contenteditable="true">Pair with /renew to force a fresh DORA cycle</td>
+        </tr>
+        <tr>
+            <td contenteditable="true"><code>ipconfig /renew</code></td>
+            <td contenteditable="true">Drops current DHCP lease and requests a new one from the DHCP server</td>
+            <td contenteditable="true">When DHCP address is missing, stale, or shows 169.254.x.x</td>
+        </tr>
+        <tr>
+            <td contenteditable="true"><code>ipconfig /displaydns</code></td>
+            <td contenteditable="true">Shows the local DNS resolver cache (recently looked-up names and their IPs)</td>
+            <td contenteditable="true">Check whether a cached entry is stale or incorrect</td>
+        </tr>
+        <tr>
+            <td contenteditable="true"><code>ipconfig /flushdns</code></td>
+            <td contenteditable="true">Clears the DNS resolver cache entirely</td>
+            <td contenteditable="true">Force a fresh DNS lookup after editing the hosts file</td>
+        </tr>
+        <tr>
+            <td contenteditable="true"><code>nslookup &lt;hostname&gt;</code></td>
+            <td contenteditable="true">Queries the configured DNS server and returns what it knows about the hostname</td>
+            <td contenteditable="true">Test whether 8.8.8.8 can resolve a public name</td>
+        </tr>
+        <tr>
+            <td contenteditable="true"><code>nslookup &lt;hostname&gt; &lt;server&gt;</code></td>
+            <td contenteditable="true">Queries a specific DNS server instead of the default</td>
+            <td contenteditable="true">Compare results between 8.8.8.8 and a local source</td>
+        </tr>
+        <tr>
+            <td contenteditable="true"><code>netstat -an</code></td>
+            <td contenteditable="true">All active TCP/UDP connections and listening ports with their states</td>
+            <td contenteditable="true">Check if a service is running and whether a session is established</td>
+        </tr>
+        <tr>
+            <td contenteditable="true"><code>netstat -n</code></td>
+            <td contenteditable="true">Active connections with numeric IPs only (no DNS reverse lookup)</td>
+            <td contenteditable="true">Faster output when you only need IP addresses and ports</td>
+        </tr>
+        <tr>
+            <td contenteditable="true"><code>arp -a</code></td>
+            <td contenteditable="true">ARP cache: all known IP-to-MAC address mappings on the local subnet</td>
+            <td contenteditable="true">Verify Layer 2 reachability; detect IP address conflicts</td>
+        </tr>
+        <tr>
+            <td contenteditable="true"><code>arp -d *</code></td>
+            <td contenteditable="true">Clears the entire ARP cache</td>
+            <td contenteditable="true">Force fresh ARP resolution after an address change or conflict fix</td>
+        </tr>
+        <tr>
+            <td contenteditable="true"><code>ping &lt;IP&gt;</code></td>
+            <td contenteditable="true">Tests basic ICMP reachability to a host</td>
+            <td contenteditable="true">Always the first test in any troubleshooting sequence</td>
+        </tr>
+    </table>
+    <hr>
+
+    <h2 contenteditable="true">Troubleshooting Method: Work Bottom-Up</h2>
+    <p contenteditable="true">Always start at the lowest layer and work upward. Fixing a higher-layer problem while a lower-layer problem exists is wasted effort.</p>
+    <ol>
+        <li contenteditable="true"><strong>Physical:</strong> Is the cable plugged in? Is the adapter enabled in Device Manager?</li>
+        <li contenteditable="true"><strong>IP Configuration:</strong> Does the machine have the correct IP, mask, and gateway?<br><em>Commands:</em> <code>ipconfig</code> and <code>ipconfig /all</code></li>
+        <li contenteditable="true"><strong>Reachability:</strong> Can packets travel between the two machines?<br><em>Command:</em> <code>ping 172.16.100.11</code></li>
+        <li contenteditable="true"><strong>ARP:</strong> Does the machine know the MAC address of the target?<br><em>Command:</em> <code>arp -a</code></li>
+        <li contenteditable="true"><strong>Name Resolution:</strong> Can the hostname be translated to an IP address?<br><em>Commands:</em> <code>ipconfig /displaydns</code>, <code>ipconfig /flushdns</code>, and <code>nslookup</code> (for public names).<br><em>Important:</em> 8.8.8.8 will NOT resolve local lab hostnames. Use the hosts file for local names.</li>
+        <li contenteditable="true"><strong>Transport Service:</strong> Is the destination service actually listening on the expected port?<br><em>Command:</em> <code>netstat -an</code></li>
+    </ol>
+    <hr>
+
+    <h2 contenteditable="true">Quick Symptom-to-Command Map</h2>
+    <table>
+        <tr>
+            <th contenteditable="true">Symptom</th>
+            <th contenteditable="true">First Command to Run</th>
+            <th contenteditable="true">What to Look For</th>
+        </tr>
+        <tr>
+            <td contenteditable="true">Cannot reach any host on 172.16.100.x</td>
+            <td contenteditable="true"><code>ipconfig</code></td>
+            <td contenteditable="true">Missing or wrong IP address or subnet mask</td>
+        </tr>
+        <tr>
+            <td contenteditable="true">IP address is 169.254.x.x (APIPA)</td>
+            <td contenteditable="true"><code>ipconfig /release</code> then <code>ipconfig /renew</code></td>
+            <td contenteditable="true">DHCP server not responding; verify server is online</td>
+        </tr>
+        <tr>
+            <td contenteditable="true">Local hostname not resolving (expected — 8.8.8.8 only resolves public names)</td>
+            <td contenteditable="true"><code>ipconfig /displaydns</code> then check hosts file</td>
+            <td contenteditable="true">Entry absent from cache; add hostname to hosts file manually</td>
+        </tr>
+        <tr>
+            <td contenteditable="true">Public hostname resolves to wrong IP</td>
+            <td contenteditable="true"><code>ipconfig /displaydns</code></td>
+            <td contenteditable="true">Stale cache entry; run <code>ipconfig /flushdns</code></td>
+        </tr>
+        <tr>
+            <td contenteditable="true">Service not connecting on port 5000</td>
+            <td contenteditable="true"><code>netstat -an</code></td>
+            <td contenteditable="true">Port 5000 absent from LISTENING column on server machine</td>
+        </tr>
+        <tr>
+            <td contenteditable="true">IP conflict suspected (intermittent ping)</td>
+            <td contenteditable="true"><code>arp -a</code></td>
+            <td contenteditable="true">Same IP appears with two different MAC addresses</td>
+        </tr>
+    </table>
+    <hr>
+
+    <h2 contenteditable="true">Warm-Up: Capture a Healthy Baseline</h2>
+    <p contenteditable="true">Before any fault scenario, run the sequence below to record what a working network looks like. If you spot a problem during the warm-up, tell your instructor before proceeding.</p>
+    <ul>
+        <li contenteditable="true"><strong>Step 1 — Quick IP check:</strong> Run <code>ipconfig</code>.<br>Expected: IP 172.16.100.10, Mask 255.255.255.0, Gateway 172.16.100.1. If any value is wrong, stop and fix it before continuing.</li>
+        <li contenteditable="true"><strong>Step 2 — Full detail check:</strong> Run <code>ipconfig /all</code>.<br>Listen for: Physical Address (your MAC address), DHCP Enabled (Yes or No), and DNS Servers. The DNS server should show 8.8.8.8. Note all three values for comparison later.</li>
+        <li contenteditable="true"><strong>Step 3 — Reachability test:</strong> Run <code>ping 172.16.100.11</code>.<br>Expected: four replies with 0 percent packet loss. If ping fails, troubleshoot IP configuration before any other step.</li>
+        <li contenteditable="true"><strong>Step 4 — ARP cache check:</strong> Run <code>arp -a</code>.<br>After a successful ping, your partner's IP 172.16.100.11 should appear with their MAC address. If the same IP shows two different MACs, there is an IP conflict. Report it to your instructor immediately.</li>
+        <li contenteditable="true"><strong>Step 5 — DNS cache and hosts file check:</strong> Run <code>ipconfig /displaydns</code>.<br>The cache will likely be empty at the start of the lab. That is normal with 8.8.8.8 as the DNS server, because no public lookups have been made yet. Local lab hostnames are not in the cache because 8.8.8.8 does not know them.<br>To verify local name resolution, check the hosts file located at <code>C:\Windows\System32\drivers\etc\hosts</code>. Open it with Notepad run as Administrator. Each line maps a hostname to an IP address. A correct entry for your lab looks like:<br><code>172.16.100.11    pc2-student-b</code><br>If this line is absent or incorrect, local hostname resolution will fail even though 8.8.8.8 is working perfectly.</li>
+        <li contenteditable="true"><strong>Step 6 — nslookup test (public name only):</strong> Run <code>nslookup google.com</code>.<br>This tests whether 8.8.8.8 is reachable and responding. A successful result returns an IP address for google.com. If this fails, there is a connectivity or DNS server problem outside your subnet.<br><em>NOTE:</em> Do NOT use nslookup to look up local lab hostnames such as pc2-student-b. Because 8.8.8.8 is your DNS server, it will always return a failure for local names. Use the hosts file instead.</li>
+        <li contenteditable="true"><strong>Step 7 — Active connections check:</strong> Run <code>netstat -an</code>.<br>At baseline there should be no ESTABLISHED sessions unless other software is running. Note any ports already in LISTENING state.</li>
+    </ul>
+    <hr>
+
+    <h2 contenteditable="true">Troubleshooting Scenarios</h2>
+    <p contenteditable="true">Work through each scenario in order. Read the fault report, choose the right command, run it, interpret the output, and apply the fix. Discuss every step with your partner before moving on.</p>
+
+    <h3 contenteditable="true">Scenario 1: The Mystery Address</h3>
+    <p contenteditable="true"><strong>Fault report:</strong> Your machine cannot reach 172.16.100.11 even though the cable is plugged in. A classmate changed some settings and you do not know what they changed.</p>
+    <p contenteditable="true"><strong>Your Task:</strong> Use ipconfig to diagnose the problem from the command line only. Do not open any GUI network settings panels.</p>
+    <ol>
+        <li contenteditable="true">Run <code>ipconfig</code> and listen carefully to every value.<br>
+            <pre>IPv4 Address . . . . : 192.168.1.50
+Subnet Mask  . . . . : 255.255.255.0
+Default Gateway  . . : 192.168.1.1</pre>
+            The address 192.168.1.50 is on a completely different network. Your machine cannot reach anything on 172.16.100.x until this is corrected.
+        </li>
+        <li contenteditable="true">Run <code>ipconfig /all</code> to determine whether this is a static address or a DHCP mistake.<br>Listen for DHCP Enabled. If it says No, someone manually entered the wrong address. If it says Yes, the DHCP server handed out an address from the wrong pool.</li>
+        <li contenteditable="true">Fix the address:<br>
+            - If static: open network adapter properties and set IP to 172.16.100.10, mask to 255.255.255.0, gateway to 172.16.100.1.<br>
+            - If DHCP: force a fresh lease:<br>
+            <code>ipconfig /release</code><br>
+            <code>ipconfig /renew</code>
+        </li>
+        <li contenteditable="true">Verify the fix with <code>ipconfig</code> (confirm 172.16.100.10) and test reachability via <code>ping 172.16.100.11</code>.</li>
+    </ol>
+    <p contenteditable="true"><strong>Discussion Questions — Scenario 1:</strong></p>
+    <ul>
+        <li contenteditable="true">How did ipconfig alone reveal the problem before you even tried to ping?</li>
+        <li contenteditable="true">What is the difference between a wrong IP address and a missing IP address?</li>
+        <li contenteditable="true">Why can a machine on 192.168.1.x never reach 172.16.100.x without a router?</li>
+    </ul>
+
+    <h3 contenteditable="true">Scenario 2: The Hostname That Goes Nowhere</h3>
+    <p contenteditable="true"><strong>Fault report:</strong> You can ping 172.16.100.11 by IP address but when you try to connect using the hostname pc2-student-b, nothing works. Your partner has a service running on port 8080.</p>
+    <p contenteditable="true"><strong>Background:</strong> Your DNS server is 8.8.8.8, which knows public websites like google.com but has no knowledge of private local names like pc2-student-b. Local name resolution uses the hosts file.</p>
+    <p contenteditable="true"><strong>Your Task:</strong> Investigate the hosts file and the DNS cache, then verify the service is running.</p>
+    <ol>
+        <li contenteditable="true">Check the DNS cache first: <code>ipconfig /displaydns</code>.</li>
+        <li contenteditable="true">Open the hosts file in Notepad as Administrator: <code>C:\Windows\System32\drivers\etc\hosts</code>.<br>A correct entry sounds like: <code>172.16.100.11    pc2-student-b</code>. Add or correct the line if missing.</li>
+        <li contenteditable="true">Flush the DNS cache: <code>ipconfig /flushdns</code>.</li>
+        <li contenteditable="true">Verify the hosts entry in cache: <code>ipconfig /displaydns</code>.</li>
+        <li contenteditable="true">Confirm with <code>nslookup pc2-student-b</code>.</li>
+        <li contenteditable="true">Check port 8080 on your partner's machine using <code>netstat -an</code>. If absent, start the listener: <code>nc -l -p 8080</code>.</li>
+        <li contenteditable="true">Connect from your machine: <code>nc pc2-student-b 8080</code>.</li>
+    </ol>
+    <p contenteditable="true"><strong>Discussion Questions — Scenario 2:</strong></p>
+    <ul>
+        <li contenteditable="true">Why will nslookup always fail for local lab names when the DNS server is 8.8.8.8?</li>
+        <li contenteditable="true">What is the hosts file and at what point in the name resolution process does Windows consult it?</li>
+        <li contenteditable="true">Why do you need to run ipconfig /flushdns after editing the hosts file?</li>
+        <li contenteditable="true">What does it mean when nslookup returns the correct IP but the connection to port 8080 still fails?</li>
+    </ul>
+
+    <h3 contenteditable="true">Scenario 3: The Ghost on the Network</h3>
+    <p contenteditable="true"><strong>Fault report:</strong> Connectivity to 172.16.100.11 is intermittent. Sometimes ping works, sometimes it times out. Your instructor suspects an IP address conflict.</p>
+    <p contenteditable="true"><strong>Your Task:</strong> Identify and verify the IP conflict using ARP.</p>
+    <ol>
+        <li contenteditable="true">Ping your partner: <code>ping 172.16.100.11</code>.</li>
+        <li contenteditable="true">Check the ARP cache: <code>arp -a</code>. (Healthy sounds like: <code>172.16.100.11     aa-bb-cc-dd-ee-ff     dynamic</code>).</li>
+        <li contenteditable="true">Clear the cache and repeat: <code>arp -d *</code>, then <code>ping 172.16.100.11</code>, then <code>arp -a</code>.</li>
+        <li contenteditable="true">Identify any unrecognized MAC address against known lab machine MACs.</li>
+        <li contenteditable="true">Fix the conflict by reassigning the conflicting device's IP, clear cache, and retest.</li>
+    </ol>
+    <p contenteditable="true"><strong>Discussion Questions — Scenario 3:</strong></p>
+    <ul>
+        <li contenteditable="true">Why does intermittent connectivity point toward an IP conflict rather than a faulty cable?</li>
+        <li contenteditable="true">At what layer of the TCP/IP model does ARP operate, and why is it specific to the local subnet?</li>
+        <li contenteditable="true">What would happen on a large production network if two servers shared the same IP address?</li>
+    </ul>
+
+    <h3 contenteditable="true">Scenario 4: Renew Fails After a Power Cut</h3>
+    <p contenteditable="true"><strong>Fault report:</strong> After a power cut, your machine came back with an address starting with 169.254 (APIPA address), meaning DHCP failed.</p>
+    <p contenteditable="true"><strong>Your Task:</strong> Investigate and recover DHCP connectivity.</p>
+    <ol>
+        <li contenteditable="true">Confirm APIPA address with <code>ipconfig</code>.</li>
+        <li contenteditable="true">Check full details with <code>ipconfig /all</code>.</li>
+        <li contenteditable="true">Attempt gateway ping: <code>ping 172.16.100.1</code> (Expected: Request timed out).</li>
+        <li contenteditable="true">Force a new lease:<br><code>ipconfig /release</code><br><code>ipconfig /renew</code></li>
+        <li contenteditable="true">Verify restoration with <code>ipconfig</code> and <code>ping 172.16.100.11</code>.</li>
+    </ol>
+    <p contenteditable="true"><strong>Discussion Questions — Scenario 4:</strong></p>
+    <ul>
+        <li contenteditable="true">What is the DORA process and which specific step fails when you end up with an APIPA address?</li>
+        <li contenteditable="true">Why can two APIPA machines sometimes communicate with each other but not with the rest of the network?</li>
+        <li contenteditable="true">What is the difference between ipconfig /release and ipconfig /renew? Do you always need to release before renewing?</li>
+    </ul>
+
+    <h3 contenteditable="true">Scenario 5: The Port That Was Not Listening</h3>
+    <p contenteditable="true"><strong>Fault report:</strong> You are trying to connect to a service on 172.16.100.11 port 5000 and receive "Connection refused" every time, even though both machines can ping each other.</p>
+    <p contenteditable="true"><strong>Your Task:</strong> Verify transport layer listeners and resolve the connection.</p>
+    <ol>
+        <li contenteditable="true">Attempt connection: <code>nc 172.16.100.11 5000</code> (Listen for Connection refused).</li>
+        <li contenteditable="true">Have your partner check ports with <code>netstat -an</code> for LISTENING state.</li>
+        <li contenteditable="true">Partner starts listener: <code>nc -l -p 5000</code> and verifies with <code>netstat -an</code>.</li>
+        <li contenteditable="true">Retry connection, type a message, and verify ESTABLISHED state on both machines using <code>netstat -an</code>.</li>
+    </ol>
+    <p contenteditable="true"><strong>Discussion Questions — Scenario 5:</strong></p>
+    <ul>
+        <li contenteditable="true">What is the difference between Connection refused and Request timed out? What does each error tell you about where the fault is?</li>
+        <li contenteditable="true">Why does netstat show ESTABLISHED on both machines simultaneously during an active TCP session?</li>
+        <li contenteditable="true">If netstat showed port 5000 in LISTENING state but the connection still failed, what would you check next?</li>
+    </ul>
+    <hr>
+
+    <p style="text-align: center;" contenteditable="true">— End of Lab —<br>
+    TCP/IP Troubleshooting Lab • Student Practice Exercise</p>
+
+</body>
+</html>
